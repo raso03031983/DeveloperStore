@@ -1,89 +1,145 @@
-# 🛒 DeveloperStore API
 
-Projeto de avaliação técnica para desenvolvedor C# .NET Backend, com foco em arquitetura DDD, autenticação JWT, testes e boas práticas de design de APIs RESTful.
+# DeveloperStore API
+
+A **DeveloperStore** é uma API RESTful desenvolvida em **.NET 8**, usando **Entity Framework Core**, arquitetura **Domain-Driven Design (DDD)**, autenticação via **JWT** e persistência em **SQL Server**. O objetivo é servir como uma solução de backend para gerenciamento de vendas com funcionalidades de autenticação, criação e manutenção de registros de vendas.
+
+---
+
+## 🔧 Tecnologias Utilizadas
+
+- [.NET 8](https://dotnet.microsoft.com/)
+- Entity Framework Core
+- SQL Server (Docker)
+- JWT Authentication
+- FluentValidation
+- Swagger (OpenAPI)
+- Docker & Docker Compose
+- xUnit & Moq (para testes)
 
 ---
 
 ## 📦 Estrutura do Projeto
 
-| Projeto                        | Descrição                                      |
-|-------------------------------|------------------------------------------------|
-| `DeveloperStore.Sales.API`    | API principal (WebAPI com controllers REST)    |
-| `DeveloperStore.Sales.Application` | DTOs, Services, Validations e Interfaces  |
-| `DeveloperStore.Sales.Domain` | Entidades de domínio e eventos                 |
-| `DeveloperStore.Sales.Infrastructure` | DbContext, Mapeamentos EF Core     |
-| `DeveloperStore.Sales.Tests`  | Testes unitários e integração com xUnit        |
+```
+DeveloperStore/
+├── DeveloperStore.Sales.API            → API ASP.NET Core
+├── DeveloperStore.Sales.Application   → Camada de aplicação (DTOs, serviços, filtros, validações)
+├── DeveloperStore.Sales.Domain        → Entidades e interfaces de domínio
+├── DeveloperStore.Sales.Infrastructure→ Persistência de dados (EF Core, Context, Mappings)
+├── DeveloperStore.Sales.Tests         → Testes unitários e de controller
+└── docker-compose.yml                 → Composição dos containers (API + SQL Server)
+```
 
 ---
 
-## 🚀 Tecnologias
+## 🚀 Executando com Docker
 
-- .NET 8
-- ASP.NET Core Web API
-- Entity Framework Core
-- SQL Server
-- JWT Authentication
-- FluentValidation
-- xUnit (testes)
-- Docker
+> A aplicação e o banco de dados podem ser iniciados juntos com Docker Compose.
 
----
+### 1. Pré-requisitos
 
-## 🔐 Autenticação
+- Docker instalado e funcionando corretamente
+- Docker Desktop com WSL2 ativo (em Windows)
 
-A API utiliza autenticação baseada em JWT com registro e login persistidos no banco de dados.
+### 2. Build e execução
 
-### Exemplo de fluxo:
+```bash
+docker-compose up --build
+```
 
-1. **Registrar usuário**
-   ```
-   POST /api/Auth/register
-   {
-     "username": "admin",
-     "password": "admin123"
-   }
-   ```
+A API estará disponível em:
 
-2. **Login**
-   ```
-   POST /api/Auth/login
-   {
-     "username": "admin",
-     "password": "admin123"
-   }
-   ```
-
-3. **Header de autenticação:**
-   ```
-   Authorization: Bearer {token}
-   ```
+```
+http://localhost:8080/swagger
+```
 
 ---
 
-## 📚 Endpoints Principais
+## 🔧 Executando Localmente (sem Docker)
 
-- `POST /api/Sales` - Cria uma nova venda
-- `GET /api/Sales/{id}` - Busca venda por ID
-- `GET /api/Sales` - Lista vendas com filtros e paginação
-- `PUT /api/Sales/{id}` - Atualiza venda
-- `DELETE /api/Sales/{id}` - Cancela venda
+### 1. Pré-requisitos
+
+- .NET 8 SDK
+- SQL Server Local ou Azure Data Studio
+
+### 2. Banco de dados
+
+Configure a string de conexão no `appsettings.json`:
+
+```json
+"ConnectionStrings": {
+  "SalesConnection": "Server=(localdb)\\mssqllocaldb;Database=DeveloperStoreDb;Trusted_Connection=True;"
+}
+```
+
+Ao rodar a aplicação com `dotnet run`, o banco será criado automaticamente via `EnsureCreated()`.
+
+### 3. Executar a aplicação
+
+```bash
+cd DeveloperStore.Sales.API
+dotnet run
+```
 
 ---
 
-## 🔍 Filtros disponíveis
+## 🔑 Autenticação JWT
 
-- `startDate`, `endDate` (Data)
-- `customerName` (Cliente)
-- `branchName` (Filial)
-- `cancelled` (bool)
-- `pageNumber`, `pageSize`
-- `orderBy`, `sortDirection`
+### Registro de usuário
+
+**Endpoint:** `POST /api/Auth/register`
+
+```json
+{
+  "username": "admin",
+  "password": "Admin@123"
+}
+```
+
+### Login
+
+**Endpoint:** `POST /api/Auth/login`
+
+```json
+{
+  "username": "admin",
+  "password": "Admin@123"
+}
+```
+
+**Resposta:**
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6Ikp..."
+}
+```
+
+Use esse token no Swagger clicando em **Authorize** e inserindo:
+
+```
+Bearer <seu_token>
+```
 
 ---
 
-## 🧪 Rodando os Testes
+## 📘 Endpoints Principais
 
-Os testes estão localizados em `DeveloperStore.Sales.Tests`:
+### Vendas
+
+| Verbo  | Rota               | Descrição                       |
+|--------|--------------------|----------------------------------|
+| POST   | `/api/sales`       | Cria uma nova venda              |
+| GET    | `/api/sales/{id}`  | Retorna venda por ID             |
+| GET    | `/api/sales`       | Lista vendas com filtros         |
+| PUT    | `/api/sales/{id}`  | Atualiza uma venda               |
+| DELETE | `/api/sales/{id}`  | Cancela uma venda                |
+
+> ⚠️ Todos os endpoints de vendas requerem autenticação JWT.
+
+---
+
+## 🧪 Executando os Testes
 
 ```bash
 dotnet test
@@ -91,62 +147,27 @@ dotnet test
 
 ---
 
-## 🐳 Rodando com Docker
+## 🗃️ Banco de Dados
 
-### Pré-requisitos
-- Docker
-- SQL Server disponível em `localhost`, ou ajuste no `appsettings.json`
+O banco de dados é criado automaticamente na inicialização da aplicação via `EnsureCreated`. Ele será hospedado no container SQL Server com:
 
-### Build e run
-```bash
-docker build -t developerstore-api -f DeveloperStore.Sales.API/Dockerfile .
-docker run -d -p 8080:80 --name devstore developerstore-api
-```
-
-Acesse em: [http://localhost:8080/swagger](http://localhost:8080/swagger)
+- **Server:** `localhost,1433`
+- **User:** `sa`
+- **Password:** `YourStrong@Password1`
+- **Database:** `DeveloperStoreDb`
 
 ---
 
-## ⚙️ Configurações
+## 📌 Observações
 
-Veja o arquivo `DeveloperStore.Sales.API/appsettings.json`:
-
-```json
-"Jwt": {
-  "Key": "sua-chave-super-secreta"
-},
-"ConnectionStrings": {
-  "SalesConnection": "Server=localhost;Database=DeveloperStoreDb;Trusted_Connection=True;TrustServerCertificate=True;"
-}
-```
+- O projeto segue o padrão DDD, com separação clara de responsabilidades.
+- Os testes cobrem os controllers principais.
+- O Swagger está habilitado apenas em ambiente de desenvolvimento.
 
 ---
 
-## 🧠 Diferenciais implementados
+## 🧑‍💻 Autor
 
-- Autenticação JWT persistente (registro e login)
-- Validações via FluentValidation
-- Eventos de domínio: `SaleCreated`, `SaleCancelled`, etc
-- Geração automática de número de venda incremental: `SALE-2025-0001`
-- Testes unitários e de integração
-- Paginação e ordenação nos endpoints
-
----
-
-## 📝 Como rodar localmente
-
-```bash
-git clone https://github.com/raso03031983/DeveloperStore.git
-cd DeveloperStore/DeveloperStore
-dotnet build
-dotnet ef database update --project DeveloperStore.Sales.Infrastructure
-dotnet run --project DeveloperStore.Sales.API
-```
-
-Acesse: [https://localhost:7265/swagger](https://localhost:7265/swagger)
-
----
-
-## 📄 Licença
-
-Projeto de uso educacional e avaliativo.
+**Rodrigo Alexander**  
+Projeto técnico para processo seletivo  
+GitHub: [raso03031983](https://github.com/raso03031983)

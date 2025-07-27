@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: developerstore-sql
+    environment:
+      SA_PASSWORD: "YourStrong@Password1"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    networks:
+      - developerstore-net
+    volumes:
+      - sqlvolume:/var/opt/mssql
+
+  api:
+    build:
+      context: .
+      dockerfile: DeveloperStore.Sales.API/Dockerfile
+    container_name: developerstore-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__SalesConnection=Server=sqlserver;Database=DeveloperStoreDb;User Id=sa;Password=YourStrong@Password1;TrustServerCertificate=True;
+      - Jwt__Key=Kf8mZx72LqTnR4sVwYbNhGdKeQpMuAjX
+    ports:
+      - "8080:8080"
+    depends_on:
+      - sqlserver
+    networks:
+      - developerstore-net
+
+networks:
+  developerstore-net:
+
+volumes:
+  sqlvolume:

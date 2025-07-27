@@ -10,7 +10,16 @@ using System.Reflection;
 using System.Text;
 
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    EnvironmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"
+});
+
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
+    .AddEnvironmentVariables();
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 var keyBytes = Encoding.ASCII.GetBytes(jwtKey!);
@@ -32,7 +41,14 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddDbContext<SalesDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("SalesConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("SalesConnection"),
+        sqlOptions => sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,             // número de tentativas
+            maxRetryDelay: TimeSpan.FromSeconds(10), // tempo entre as tentativas
+            errorNumbersToAdd: null       // erros específicos (pode deixar null)
+        )
+    ));
 
 // Register Application Services
 builder.Services.AddScoped<ISaleService, SaleService>();
@@ -87,8 +103,26 @@ if (app.Environment.IsDevelopment())
     using (var scope = app.Services.CreateScope())
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
-        dbContext.Database.EnsureCreated();
+
+        var retries = 10;
+        var delay = TimeSpan.FromSeconds(5);
+
+        while (retries > 0)
+        {
+            try
+            {
+                dbContext.Database.EnsureCreated();
+                break;
+            }
+            catch (Exception ex)
+            {
+                retries--;
+                Console.WriteLine($"Aguardando banco de dados... Tentativas restantes: {retries}");
+                Thread.Sleep(delay);
+            }
+        }
     }
+
 }
 
 app.UseHttpsRedirection();
