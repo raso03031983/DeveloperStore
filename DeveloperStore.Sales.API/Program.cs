@@ -21,9 +21,6 @@ builder.Configuration
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
     .AddEnvironmentVariables();
 
-var jwtKey = builder.Configuration["Jwt:Key"];
-var keyBytes = Encoding.ASCII.GetBytes(jwtKey!);
-
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -31,6 +28,13 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+
+    var jwtKey = builder.Configuration["Jwt:Key"];
+    if (string.IsNullOrWhiteSpace(jwtKey))
+        throw new ArgumentNullException("Jwt:Key not set in configuration");
+
+    var keyBytes = Encoding.ASCII.GetBytes(jwtKey);
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = false,
@@ -44,9 +48,9 @@ builder.Services.AddDbContext<SalesDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("SalesConnection"),
         sqlOptions => sqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 5,             // número de tentativas
-            maxRetryDelay: TimeSpan.FromSeconds(10), // tempo entre as tentativas
-            errorNumbersToAdd: null       // erros específicos (pode deixar null)
+            maxRetryCount: 5,             
+            maxRetryDelay: TimeSpan.FromSeconds(10), 
+            errorNumbersToAdd: null      
         )
     ));
 
@@ -118,7 +122,7 @@ if (app.Environment.IsDevelopment())
             {
                 retries--;
                 Console.WriteLine($"Aguardando banco de dados... Tentativas restantes: {retries}");
-                Thread.Sleep(delay);
+                await Task.Delay(delay);
             }
         }
     }
@@ -130,4 +134,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
+
+public partial class Program { }
 
